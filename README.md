@@ -27,6 +27,7 @@ part of the learning material rather than decorative additions.
 
 | Lab | Central question | Status |
 | --- | --- | --- |
+| [Phase 0: Foundations](labs/00-foundations/README.md) | What assumptions disappear when a Java call crosses a network boundary? | Checkpoint 0A complete |
 | [MapReduce](labs/01-mapreduce/README.md) | How can work be retried safely when workers fail? | Planned |
 | [Fault-tolerant KV](labs/02-fault-tolerant-kv/README.md) | What does a timeout tell a client, and how can retries avoid duplicate effects? | Planned |
 | [Raft](labs/03-raft/README.md) | How can replicas agree on one ordered log through crashes and partitions? | Planned |
@@ -35,6 +36,9 @@ part of the learning material rather than decorative additions.
 
 The sequence is intentionally cumulative. MapReduce and the first KV lab are
 independent. KV over Raft depends on Raft, and sharded KV builds on both.
+
+The current implementation checkpoint is Phase 0A: deterministic logical time,
+event ordering, cancellation, and immutable trace facts.
 
 ## Repository structure
 

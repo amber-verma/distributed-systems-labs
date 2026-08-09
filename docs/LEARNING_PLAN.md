@@ -42,6 +42,8 @@ Analogies may introduce an idea but never replace the exact protocol behavior.
 
 ## Phase 0: foundations and platform
 
+**Current status:** Checkpoint 0A complete.
+
 Start with two Java objects making a local method call. Progressively remove the
 assumptions that the callee is reachable, replies arrive, processes stay alive,
 messages retain order, and clocks agree.
