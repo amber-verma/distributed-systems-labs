@@ -1,0 +1,35 @@
+# Gradle
+.gradle/
+**/build/
+out/
+
+# Java
+*.class
+hs_err_pid*
+replay_pid*
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# Visual Studio Code
+.vscode/
+
+# Generated runtime data
+logs/
+tmp/
+traces/generated/
+*.log
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
