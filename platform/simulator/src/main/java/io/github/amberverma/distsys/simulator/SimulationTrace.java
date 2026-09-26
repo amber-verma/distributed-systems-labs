@@ -1,5 +1,6 @@
 package io.github.amberverma.distsys.simulator;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,8 +78,8 @@ public final class SimulationTrace {
             output.append('#')
                     .append(event.sequence())
                     .append(" t=")
-                    .append(event.logicalTime().toNanos())
-                    .append("ns ")
+                    .append(formatSeconds(event.logicalTime()))
+                    .append(' ')
                     .append(event.kind())
                     .append(' ')
                     .append(event.subject());
@@ -91,11 +92,29 @@ public final class SimulationTrace {
         return output.toString();
     }
 
+    private static String formatSeconds(Duration duration) {
+        var seconds = BigDecimal.valueOf(duration.getSeconds())
+                .add(BigDecimal.valueOf(duration.getNano(), 9));
+        return seconds.stripTrailingZeros().toPlainString() + "s";
+    }
+
     private static String formatAttributes(Map<String, String> attributes) {
         Objects.requireNonNull(attributes, "attributes");
         var sorted = new TreeMap<>(attributes);
         var joiner = new StringJoiner(", ", "{", "}");
-        sorted.forEach((key, value) -> joiner.add(key + '=' + value));
+        sorted.forEach((key, value) -> {
+            if (key.endsWith("Nanos")) {
+                try {
+                    var seconds = BigDecimal.valueOf(Long.parseLong(value), 9);
+                    joiner.add(key.substring(0, key.length() - "Nanos".length())
+                            + "Seconds=" + seconds.stripTrailingZeros().toPlainString() + "s");
+                } catch (NumberFormatException invalidNanos) {
+                    joiner.add(key + '=' + value);
+                }
+            } else {
+                joiner.add(key + '=' + value);
+            }
+        });
         return joiner.toString();
     }
 }
