@@ -40,12 +40,13 @@ public final class SimulationTrace {
             Map<String, String> attributes) {
         var event = new TraceEvent(
                 SCHEMA_VERSION,
-                nextSequence++,
+                nextSequence,
                 logicalTime,
                 kind,
                 subject,
                 attributes);
         events.add(event);
+        nextSequence++;
         return event;
     }
 
@@ -73,6 +74,17 @@ public final class SimulationTrace {
      * @return formatted event history
      */
     public String formatAsText() {
+        return formatAsText(events);
+    }
+
+    /**
+     * Formats an immutable trace snapshot without rebuilding a mutable trace.
+     *
+     * @param events trace facts in sequence order
+     * @return formatted event history
+     */
+    public static String formatAsText(List<TraceEvent> events) {
+        Objects.requireNonNull(events, "events");
         var output = new StringBuilder();
         for (var event : events) {
             output.append('#')
