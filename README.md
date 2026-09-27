@@ -1,88 +1,85 @@
 # Distributed Systems Labs
 
-A first-principles study of distributed systems, implemented in modern Java.
+Learn distributed systems from first principles by implementing small Java
+protocols and making their failure modes reproducible.
 
-The goal is not merely to produce working implementations. Each lab derives a
-protocol from the failure it must survive, states its guarantees precisely, and
-tests those guarantees with deterministic failure injection.
+For each mechanism: start with a simple solution, introduce a failure, observe
+what breaks, derive the minimum repair, and express its guarantee as an
+invariant. Explain both the guarantee and its limits before moving on.
 
-## Learning approach
+## Start here
 
-Every concept follows the same sequence:
+You need JDK 25; the committed Gradle wrapper supplies Gradle. No global Gradle
+installation or application framework is required.
 
-1. Start with the simplest single-node solution.
-2. Introduce one concrete failure.
-3. Observe exactly what breaks.
-4. Derive the minimum mechanism needed to address it.
-5. Name and define the mechanism.
-6. State what it guarantees and what it does not.
-7. Express the guarantee as an invariant.
-8. Map the invariant to Java code, executable traces, and tests.
+From the repository root, in Windows PowerShell:
 
-Complex terminology is introduced only after its motivating problem is clear.
-Visual timelines, state machines, log views, and interactive trace replays are
-part of the learning material rather than decorative additions.
+~~~powershell
+.\gradlew.bat --version
+.\gradlew.bat check javadoc
+.\gradlew.bat :platform:simulator:exportTraces
+~~~
 
-## Roadmap
+On macOS/Linux use the same tasks with ./gradlew.
 
-| Lab | Central question | Status |
+1. Open [Foundations](labs/00-foundations/README.md). Its quick revision section
+   is the return point; its guided chapter is the first-study path.
+2. Predict the lost-request and lost-reply outcomes before running the scenarios.
+3. Open the [trace viewer](platform/trace-visualizer/index.html) in your browser.
+   Import a generated JSON file from platform/simulator/build/traces/.
+   See the [viewer instructions](platform/trace-visualizer/README.md).
+4. Complete the Foundations self-checks, then continue to
+   [retry-safe KV](labs/01-fault-tolerant-kv/README.md).
+
+## Current progress and learning order
+
+Implementation status is evidence about the code. Your explanation and exercise
+checklist in each active chapter records learning separately.
+
+| Lab | Topic | Implementation status |
 | --- | --- | --- |
-| [Phase 0: Foundations](labs/00-foundations/README.md) | What assumptions disappear when a Java call crosses a network boundary? | Checkpoint 0A complete |
-| [MapReduce](labs/01-mapreduce/README.md) | How can work be retried safely when workers fail? | Planned |
-| [Fault-tolerant KV](labs/02-fault-tolerant-kv/README.md) | What does a timeout tell a client, and how can retries avoid duplicate effects? | Planned |
-| [Raft](labs/03-raft/README.md) | How can replicas agree on one ordered log through crashes and partitions? | Planned |
-| [KV over Raft](labs/04-kv-over-raft/README.md) | How does a replicated log become a linearizable service? | Planned |
-| [Sharded KV](labs/05-sharded-kv/README.md) | How can ownership move without creating two writable owners? | Planned |
+| 00 | [Foundations](labs/00-foundations/README.md) | 0A scheduler and 0B scripted request/reply implemented and tested |
+| 01 | [Retry-safe KV](labs/01-fault-tolerant-kv/README.md) | Next; planned |
+| 02 | [MapReduce](labs/02-mapreduce/README.md) | Planned |
+| 03 | [Raft](labs/03-raft/README.md) | Planned |
+| 04 | [KV over Raft](labs/04-kv-over-raft/README.md) | Planned |
+| 05 | [Sharded KV](labs/05-sharded-kv/README.md) | Planned |
 
-The sequence is intentionally cumulative. MapReduce and the first KV lab are
-independent. KV over Raft depends on Raft, and sharded KV builds on both.
+Folder numbers follow the learning order. The KV retry lab and MapReduce are
+independent.
 
-The current implementation checkpoint is Phase 0A: deterministic logical time,
-event ordering, cancellation, and immutable trace facts.
+The only Java build module is currently platform:simulator. It contains
+logical time, cancellation, immutable traces, scripted message delay/loss, and
+one-shot request lifecycle examples. The first offline trace viewer is
+implemented. Crash/restart, stable storage, partitions, seeded faults, and the
+distributed protocols remain future work.
 
-## Repository structure
+## Where material lives
 
-    docs/       Course plan, foundations, terminology, readings, and interview track
-    labs/       One independently documented module per distributed-systems concept
-    platform/   Deterministic simulation, trace visualization, and TCP transport
+| Location | Use it for |
+| --- | --- |
+| [Learning plan](docs/LEARNING_PLAN.md) | Sequence, scope, completion criteria, and later depth |
+| Each lab README | First-principles chapter, diagrams, exercises, and revision |
+| [Simulator reference](platform/simulator/README.md) | Shared API contracts, invariants, and implementation decisions |
+| [Glossary](docs/GLOSSARY.md) | Looking up a term after meeting its motivating problem |
+| [Reading list](docs/READING_LIST.md) | A paper paired with a specific question |
+| [TCP transport](platform/tcp-transport/README.md) | Planned real-network capstone |
 
-Each lab will grow to contain:
+Future topic folders intentionally contain short outlines. Expand a topic's
+README when its implementation begins; there is no requirement to create a
+separate concepts, design, interview, or visual-guide file for every lab.
 
-- CONCEPTS.md for first-principles theory and failure analysis.
-- VISUAL_GUIDE.md for diagrams and guided trace walkthroughs.
-- GLOSSARY.md for plain-language and precise definitions.
-- DESIGN.md for invariants, interfaces, and tradeoffs.
-- LAB.md for implementation checkpoints.
-- INTERVIEW.md for design and debugging discussions.
-- Java source, deterministic tests, and interactive visuals.
+## Technology and boundaries
 
-## Technology direction
-
-- Java 25 LTS, using stable language and runtime features by default.
-- Gradle Kotlin DSL with a committed wrapper.
-- Records, sealed types, pattern matching, immutable data, and virtual threads.
-- JUnit plus deterministic and model-based testing.
-- Plain Java protocol implementations without Spring, gRPC, or a database.
-
-The Java and Gradle toolchain will be introduced as the first verified
-implementation checkpoint. The documentation-first initial commit intentionally
-contains no untested build files.
-
-## Failure model
-
-The core labs cover non-Byzantine crash and recovery, message loss, delay,
-duplication, reordering, and network partitions. They do not assume synchronized
-clocks. Byzantine behavior, authentication, TLS, multi-key transactions, and
-production deployment are outside the core curriculum.
-
-## Course documents
-
-- [Learning plan](docs/LEARNING_PLAN.md)
-- [Foundations](docs/FOUNDATIONS.md)
-- [Glossary](docs/GLOSSARY.md)
-- [Primary reading list](docs/READING_LIST.md)
-- [Interview track](docs/INTERVIEW_TRACK.md)
-
-## License
+- Java 25, Gradle Kotlin DSL, JUnit, and plain Java protocol code.
+- Immutable data and explicit state transitions; virtual threads for later
+  blocking runtime adapters, with deterministic protocol tests on one thread.
+- The viewer is plain HTML/JavaScript with no build or server requirement.
+  Node.js 22 or newer is used only for its development tests (CI uses 24).
+- Core failures are non-Byzantine crashes, recovery, message loss, delay,
+  duplication, reordering, and partitions. Their implementation is incremental.
+- Authentication, TLS, production deployment, and multi-key transactions are
+  outside the initial implementation core. Transactions return as a later
+  focused extension.
 
 This project is licensed under the [MIT License](LICENSE).

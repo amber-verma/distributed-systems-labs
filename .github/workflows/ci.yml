@@ -32,4 +32,13 @@ jobs:
           cache-provider: basic
 
       - name: Verify
-        run: ./gradlew check javadoc --no-daemon --warning-mode all
+        run: ./gradlew check javadoc :platform:simulator:exportTraces --no-daemon --warning-mode all
+
+      - name: Set up Node for viewer tests
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Verify viewer against Java traces
+        run: node --test platform/trace-visualizer/viewer.test.cjs

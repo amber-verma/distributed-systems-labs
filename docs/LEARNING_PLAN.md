@@ -1,58 +1,82 @@
 # Learning Plan
 
-## Outcome
+## Outcome and method
 
-Develop a working mental model for distributed systems and demonstrate it with
-Java implementations that survive reproducible failure scenarios.
+Develop a working mental model of distributed systems and demonstrate it with
+Java implementations that survive reproducible failures. Build toward the
+design and debugging judgement expected of a principal engineer through
+implementation, comparisons, and explicit operational tradeoffs.
 
-The target depth is appropriate for a senior or principal engineer preparing
-for distributed-systems design, implementation, and debugging interviews.
+Use the [root progress table](../README.md#current-progress-and-learning-order)
+for implementation status. This page owns the curriculum, not a second progress
+ledger. Start with the [Foundations chapter](../labs/00-foundations/README.md).
 
-## Course method
+For each checkpoint:
 
-Each implementation checkpoint has eight gates:
+1. Predict the simplest solution's behaviour and a concrete failure trace.
+2. Derive the repair: assumptions, mechanism, invariant, and counterexample.
+3. Implement or modify the smallest behaviour and test the invariant.
+4. Explain the result and its limits in your own words; revisit it without notes.
 
-1. Read the first-principles explanation.
-2. Walk through the static visual.
-3. Replay an interactive failure scenario.
-4. Explain the mechanism and its limits in your own words.
-5. Derive or review pseudocode.
-6. Implement the smallest new behavior.
-7. Run deterministic tests and inspect the resulting trace.
-8. Complete a design and interview review.
+Diagrams sit beside the explanations they support. Use text traces for scheduler
+exercises and the offline viewer for 0B request/reply scenarios. Neither a new
+viewer feature nor interview presentation is a prerequisite for understanding
+the next mechanism. Learning quality comes from the reasoning and exercises.
 
-A later lab starts only after the current lab satisfies its acceptance criteria.
-Implementation may be handwritten, pair-programmed, or AI-assisted, but the
-reasoning gate remains mandatory.
+Complex terms need a motivating problem, minimal example, intuitive and precise
+definitions, failure timeline, misconception, invariant, and connection to code.
+Analogies introduce an idea; the protocol's exact behaviour establishes it.
+Handwritten, pair-programmed, and AI-assisted code all require the same
+explanation gate.
 
-## Explanation contract
+## Sequence and dependencies
 
-Every complex term must include:
+Folder numbers follow the learning order:
 
-- The original problem in plain language.
-- A minimal example.
-- A failure timeline.
-- An intuitive definition.
-- A precise definition.
-- A counterexample or misconception.
-- The invariant the code must preserve.
-- The Java types and tests that represent it.
+**Foundations → simulated request/reply → trace viewer v1 → retry-safe KV →
+MapReduce → Raft → KV over Raft → sharded KV → real TCP capstone.**
 
-Analogies may introduce an idea but never replace the exact protocol behavior.
+KV retries and MapReduce are independent. Raft supplies the replicated log for
+KV over Raft; sharding depends on that replicated service. Grow the shared
+platform only when the next failure exercise needs it.
 
 ## Phase 0: foundations and platform
 
-**Current status:** Checkpoint 0A complete.
+- **0A:** logical time, stable event order, cancellation, failure recording,
+  owner-thread boundaries, and immutable trace facts.
+- **0B:** one client and one Append server; immutable messages, explicit delivery
+  delays and drops, correlated replies, and one terminal client outcome.
+  Demonstrate lost requests, lost replies, late/duplicate replies, and both
+  equal-time timeout/reply orders.
+- **Viewer v1, immediately after 0B:** import the same tested histories and step
+  through messages, timers, event details, and recorded state. Rewinding shows
+  only the selected history prefix.
+- Add worker crashes and stale work when MapReduce requires them. Introduce
+  partitions and persistent state before Raft recovery exercises. Add seeded
+  fault schedules and their recorded decisions when randomized scenarios begin.
+- Keep protocol state transitions on the deterministic loop. Runtime adapters
+  translate real-thread or socket activity into the same explicit behaviours.
 
-Start with two Java objects making a local method call. Progressively remove the
-assumptions that the callee is reachable, replies arrive, processes stay alive,
-messages retain order, and clocks agree.
+The observer's simulated clock is not a clock shared by the nodes. Add the
+small happened-before/Lamport-clock exercise in Foundations before relying on
+event order as distributed knowledge.
 
-Build a deterministic simulator with logical time, seeded faults, event traces,
-and replay. Add a trace visualizer for messages, timers, crashes, state changes,
-and commits. Add real TCP only after simulated RPC behavior is understood.
+## Retry-safe KV (folder 01, next)
 
-## Lab 1: MapReduce
+Begin with an in-memory Get, Put, and Append service. Lose requests and replies,
+observe naive retries applying Append twice, then derive logical client identity,
+request sequence, cached replies, and at-most-once processing.
+
+Assume one outstanding operation per logical client. Initially the server stays
+alive and retains its deduplication table. State that boundary explicitly:
+crash-safe at-most-once behaviour requires data and deduplication state to survive
+together. Do not infer durability from a network-retry test.
+
+Completion means retries preserve the specified effects under the tested faults,
+the failure without deduplication is demonstrable, and bounded-history choices
+can be explained. This is the next implementation lab after reviewing 0B.
+
+## MapReduce (folder 02)
 
 Build a sequential executor, coordinator, virtual-thread workers, and simulated
 RPC. Introduce crashes, lease expiry, retry, concurrent attempts, and atomic
@@ -61,15 +85,7 @@ output publication.
 The key distinction is between duplicate execution and single-result
 commitment.
 
-## Lab 2: fault-tolerant KV
-
-Implement Get, Put, and Append. Lose requests and replies, observe retry
-ambiguity, then add client identities, request sequences, cached replies, and
-at-most-once processing.
-
-The core lab assumes one outstanding operation per logical client.
-
-## Lab 3: Raft
+## Raft
 
 Implement:
 
@@ -81,13 +97,13 @@ Implement:
 Dynamic membership, pre-vote, ReadIndex, and leadership transfer are documented
 extensions rather than core requirements.
 
-## Lab 4: KV over Raft
+## KV over Raft
 
 Route Get, Put, and Append through the Raft log. Replicate deduplication state,
 correlate pending requests with committed commands, recover with snapshots, and
 check generated histories for linearizability.
 
-## Lab 5: sharded KV
+## Sharded KV
 
 Use sixteen deterministic shards, multiple Raft groups, and a Raft-backed shard
 controller. Process configurations sequentially and transfer shard contents
@@ -96,14 +112,92 @@ with their deduplication state.
 The old group must stop serving before the new group starts. Temporary
 unavailability is acceptable; simultaneous writable ownership is not.
 
-## Definition of completion
 
-Each lab is complete when:
+## Broader reasoning and capstone
 
-- Its documented guarantees and non-guarantees match the implementation.
-- Named failure scenarios pass deterministically.
-- Randomized scenarios are reproducible by seed and trace.
-- Important invariants are checked automatically.
-- Visual traces correspond to executable scenarios.
-- The design review identifies production gaps and alternative approaches.
-- The implementation can be explained without relying on framework behavior.
+These are later learning additions, not extra setup prerequisites or new
+documentation folders today.
+
+| Placement | Exercise and completion evidence |
+| --- | --- |
+| Before/during Raft | Derive majority intersection, distinguish election from agreement, and state the timing/fair-delivery assumptions needed for progress. Use an adversarial schedule to motivate the limits of asynchronous consensus. |
+| After KV over Raft | Compare linearizability, causal ordering, and eventual consistency using small read/write histories. Build a two-replica conflict/reconciliation exercise and discuss Dynamo, quorum rules, and background repair. |
+| After sharding | Implement a small two-participant commit exercise. Crash the coordinator after one participant prepares and explain blocking, recovery, and atomicity versus isolation. Read Spanner as a design comparison. |
+| Final capstone | Use real processes and TCP, framing, deadlines, reconnection, and graceful shutdown. Measure latency/throughput under increasing load, bound queues and retries, inject slow peers, and diagnose a failure from observations. |
+
+Multi-key transactions stay outside the core sharded-KV guarantee; the later
+transaction exercise has its own explicit assumptions. The
+[reading list](READING_LIST.md) pairs these additions with primary sources.
+
+## Completion and revision
+
+For each checkpoint, record implementation/test status separately from personal
+exercise completion. A passing test suite does not establish that the learner
+can derive or explain the mechanism.
+
+A checkpoint is learned when you can:
+
+- Predict a named failure trace, including what each node can know.
+- State safety, progress assumptions, and deliberate non-guarantees.
+- Map the invariant to state transitions and tests.
+- Change one assumption and explain or demonstrate how the design must change.
+- Repeat the explanation later using only the chapter's short revision section.
+
+For each completed lab, its documented guarantees must match code; named failure
+scenarios must pass; important invariants must be checked; and visual examples
+must come from executable scenarios. Once randomized testing is introduced,
+record the initial state, seed, and fault choices needed to reproduce it.
+An exported history supports inspection; it does not serialize arbitrary Java
+actions into an executable replay program.
+
+## Design review and optional interview practice
+
+### Explanation exercise
+
+For every mechanism, answer:
+
+1. What concrete failure motivates it?
+2. What is the smallest example that demonstrates the failure?
+3. What invariant does the mechanism preserve?
+4. What assumptions are required for safety?
+5. What additional assumptions are required for progress?
+6. What state must survive a crash?
+7. What happens to an old or delayed message?
+8. How would an operator detect that the mechanism is unhealthy?
+
+### Design review
+
+Each lab ends with a short design review covering:
+
+- API and protocol boundary.
+- State ownership and persistence.
+- Normal request path.
+- Worst failure trace.
+- Backpressure and resource bounds.
+- Observability and replay.
+- Compatibility and rollout concerns.
+- Deliberate simplifications.
+- The first changes required for production use.
+
+### Debugging exercise
+
+Given an event trace:
+
+- Reconstruct the state known by each node at each step.
+- Separate facts from assumptions based on timeouts.
+- Identify the earliest invariant violation.
+- Reduce the failure to the shortest reproducing trace.
+- Propose a test that fails before the fix and passes afterward.
+
+### Comparison exercise
+
+For each completed lab, compare at least two alternatives. Examples include:
+
+- Lease reassignment versus fixed ownership.
+- Idempotent APIs versus general deduplication.
+- Leader-based replication versus quorum reads and writes.
+- Logging reads versus ReadIndex-style optimization.
+- Stop-and-copy shard transfer versus more available migration protocols.
+
+The expected answer includes workload, failure, operational, and complexity
+tradeoffs rather than declaring one design universally better.

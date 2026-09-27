@@ -1,7 +1,21 @@
 # Primary Reading List
 
-Readings are paired with implementation checkpoints. The goal is to interrogate
-the design choices in each paper rather than memorize its terminology.
+Read a relevant section after deriving the motivating problem in a lab. There
+is no requirement to read this entire list before coding. Use the paper to
+challenge the assumptions and choices in your own implementation.
+
+| When | Question to take into the reading |
+| --- | --- |
+| Foundations causality exercise | What order can messages establish without a shared physical clock? Start with Lamport's partial-order discussion. |
+| Simulated RPC and retry-safe KV | What does a reply establish, and where must duplicate-effect protection live? Read RPC and end-to-end arguments. |
+| MapReduce retries | How do repeated attempts still produce one accepted result? |
+| Raft elections and commitment | What evidence makes an entry safe, and what must survive a crash? Read FLP here to examine progress assumptions, not as a prerequisite to 0A. |
+| KV over Raft | Which concurrent histories admit the claimed linearization points? |
+| After replicated KV | How does Dynamo trade consistency for availability, and how are conflicting versions reconciled? |
+| After sharding | How do Spanner's replication, time assumptions, and transaction coordination fit together? |
+
+The MIT course is a broader source of systems case studies; follow this
+repository's [learning order](LEARNING_PLAN.md#sequence-and-dependencies).
 
 ## Foundations
 

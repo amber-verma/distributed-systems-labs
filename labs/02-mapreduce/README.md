@@ -1,6 +1,9 @@
-# Lab 1: MapReduce
+# Lab 2: MapReduce
 
 **Status:** Planned
+
+**Learning order:** after [retry-safe KV](../01-fault-tolerant-kv/README.md), though
+the two labs are independent. See the [course sequence](../../docs/LEARNING_PLAN.md#sequence-and-dependencies).
 
 ## First-principles question
 
@@ -39,4 +42,6 @@ demonstrated from an event trace.
 
 ## Dependencies
 
-Deterministic simulator and trace visualizer only.
+The deterministic simulator. Add worker crash and stale-attempt scenarios as
+their motivating failures appear. Use the existing viewer and extend its task
+state observations alongside the lab.

@@ -11,6 +11,18 @@ import org.junit.jupiter.api.Test;
 
 class SimulationTraceTest {
 
+    @Test
+    void rejectedRecordDoesNotConsumeASequenceNumber() {
+        var trace = new SimulationTrace();
+        trace.record(Duration.ZERO, TraceKind.TASK_STARTED, "first", Map.of());
+        assertThrows(IllegalArgumentException.class,
+                () -> trace.record(Duration.ZERO, TraceKind.TASK_STARTED, " ", Map.of()));
+        trace.record(Duration.ZERO, TraceKind.TASK_COMPLETED, "second", Map.of());
+
+        assertEquals(java.util.List.of(0L, 1L),
+                trace.events().stream().map(TraceEvent::sequence).toList());
+    }
+
     /**
      * Recording copies the caller's attributes, and events() returns a snapshot
      * that cannot be edited or changed by later records.

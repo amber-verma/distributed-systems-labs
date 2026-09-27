@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distributed Systems Lab · Trace Viewer</title>
+<style>
+:root{color-scheme:light;--ink:#172e3c;--muted:#586d78;--line:#d9e2e5;--accent:#087d79;--paper:#fff;--bg:#f3f6f7}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}
+header,main{max-width:1320px;margin:auto;padding:24px 32px}header{padding-bottom:12px}
+.eyebrow{text-transform:uppercase;letter-spacing:.14em;color:var(--accent);font-size:12px;font-weight:750}
+h1{font-size:32px;line-height:1.2;margin:10px 0}h2{font-size:18px;margin:0 0 12px}p{margin:8px 0;color:var(--muted)}
+.bar,.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px}
+.bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+button,.file-label{font:inherit;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink);padding:8px 13px;cursor:pointer}
+button:hover,.file-label:hover{border-color:var(--accent)}button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #69ccc7;outline-offset:3px}
+button:disabled{opacity:.45;cursor:default}.primary{background:var(--accent);color:white;border-color:var(--accent)}
+input[type=file]{max-width:285px}input[type=range]{flex:1;min-width:150px;accent-color:var(--accent)}
+#position{font-variant-numeric:tabular-nums;min-width:220px}#error{color:#a12c39;white-space:pre-wrap}
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(320px,1fr);gap:18px}.stack{display:grid;gap:18px;align-content:start}
+.stack,.panel{min-width:0}code{overflow-wrap:anywhere}
+#states{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}.state{flex:1;min-width:140px;background:#f1f7f7;padding:12px;border-radius:8px}
+.state span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}.state strong{display:block;overflow-wrap:anywhere}
+#diagram{width:100%;overflow:auto;min-height:180px}svg{display:block;width:100%;min-width:400px}
+.note{font-size:13px}.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13px}.ok{color:#087d79}.lost{color:#b73b4a}.pending{color:#7b641d}
+#events{max-height:385px;overflow:auto;display:grid;gap:5px}#events button{text-align:left;font:12px/1.6 ui-monospace,monospace;overflow-wrap:anywhere}
+#events button[aria-current=true]{background:#e1f3f1;border-color:var(--accent)}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;margin:0}
+#timers{padding-left:18px;font-size:13px}details{margin:12px 0 18px}summary{cursor:pointer;color:var(--accent)}
+textarea{display:block;width:100%;min-height:100px;margin:10px 0;padding:10px;font:12px/1.4 ui-monospace,monospace;border:1px solid var(--line);border-radius:6px}
+.empty{padding:25px 0;text-align:center;color:var(--muted)}#filename{overflow-wrap:anywhere}
+@media(max-width:850px){header,main{padding:18px}.layout{grid-template-columns:minmax(0,1fr)}h1{font-size:27px}#position{min-width:100%}}
+</style>
+<script src="viewer.js" defer></script>
+</head>
+<body>
+<header>
+<div class="eyebrow">Distributed systems · Foundations</div>
+<h1>Follow the facts, one event at a time.</h1>
+<p>Inspect messages, deadlines, and recorded state. A timeout tells the client that the outcome is unknown.</p>
+</header>
+<main>
+<div class="bar">
+<label for="trace-file"><strong>Open trace JSON</strong></label>
+<input id="trace-file" type="file" accept=".json,application/json">
+<span id="filename">No trace loaded</span>
+</div>
+<p class="note">Generate examples with <code>gradlew.bat :platform:simulator:exportTraces</code>, then open a JSON file from <code>platform/simulator/build/traces/</code>. Files stay in this browser.</p>
+<details><summary>Paste trace JSON</summary>
+<label for="trace-paste">Exported trace</label><textarea id="trace-paste" spellcheck="false"></textarea>
+<button id="load-paste">Load pasted trace</button>
+</details>
+<p id="error" role="alert"></p>
+<div class="bar" aria-label="Playback controls">
+<button id="start" disabled>Start</button><button id="previous" disabled>Previous</button>
+<button id="next" class="primary" disabled>Next event</button><button id="end" disabled>End</button>
+<input id="cursor" type="range" min="-1" max="-1" value="-1" aria-label="Selected event" disabled>
+<output id="position" aria-live="polite">Open a trace to begin</output>
+</div>
+<div class="layout">
+<div class="stack">
+<section class="panel">
+<h2>Recorded state</h2><div id="states"><p>No state observations yet.</p></div>
+<p class="note">This is the test harness's view. The client cannot read the server's state from here.</p>
+</section>
+<section class="panel">
+<h2>Message history</h2>
+<div class="legend"><span class="pending">● In flight</span><span class="ok">● Delivered</span><span class="lost">× Dropped</span></div>
+<p class="note">Rows follow send order. Labels show send → latest observed time; vertical spacing is not elapsed time.</p>
+<div id="diagram"><p class="empty">Step through a request/reply trace to reveal its messages.</p></div>
+</section>
+</div>
+<div class="stack">
+<section class="panel"><h2>Scheduled timers and events</h2><ul id="timers"><li>No pending events.</li></ul></section>
+<section class="panel"><h2>Selected event</h2><pre id="details">No event selected.</pre></section>
+<section class="panel"><h2>Event history</h2><div id="events"><p>Scheduler traces work here too.</p></div></section>
+</div>
+</div>
+</main>
+</body>
