@@ -11,30 +11,6 @@ The offline trace viewer v1 is available. Personal mastery is recorded in the
 **Returning for revision:** read the next section, predict one failure trace,
 and answer its self-check before opening code.
 
-## Quick revision
-
-| Remember | What to be able to explain |
-| --- | --- |
-| Timeout = unknown outcome | A lost request and a lost reply look the same to the client, but leave different server states |
-| Knowledge is local | The test harness can inspect all nodes; the client cannot use the viewer as protocol evidence |
-| Safety and progress differ | A request must complete at most once locally, even if it cannot finish successfully |
-| Determinism controls choices | Due time plus insertion ID chooses event order; real networks promise neither tie order |
-| Client completion is not deduplication | Ignoring a late reply prevents a second callback, but does not stop repeated server effects |
-| Simulator time is an observer tool | It is different from a node's physical clock or Lamport clock |
-| A trace is an immutable history | Stepping backward reconstructs recorded state; it does not undo Java actions |
-
-~~~mermaid
-flowchart LR
-    P[Pending] -->|qualifying reply| S[Succeeded]
-    P -->|deadline| T[Timed out: remote outcome unknown]
-    S -->|later reply: ignore| S
-    T -->|later reply: ignore| T
-~~~
-
-The core invariant for 0B is **at most one terminal client transition per
-request**. A successful reply lets this example report the Append result; a
-timeout makes no assertion about whether the server applied it.
-
 ## First principles
 
 ### 1. Begin with the smallest possible system
@@ -324,7 +300,7 @@ sequenceDiagram
     S->>S: value becomes x
     Note over C: Deadline expires: Timed out
     S-->>C: Late reply for request-1
-    C->>C: Ignore reply; remain Timed out
+    C->>C: Ignore late reply, remain Timed out
 ~~~
 
 The minimal repair here prevents double completion. We deliberately leave
@@ -387,200 +363,35 @@ nanoseconds as decimal strings.
 For API contracts and code links, use the
 [simulator reference](../../platform/simulator/README.md).
 
-## Exercises
 
-### Checkpoint 0A: control event order
+## Quick revision
 
-#### Exercise 1: Predict event order
+| Remember | What to be able to explain |
+| --- | --- |
+| Timeout = unknown outcome | A lost request and a lost reply look the same to the client, but leave different server states |
+| Knowledge is local | The test harness can inspect all nodes; the client cannot use the viewer as protocol evidence |
+| Safety and progress differ | A request must complete at most once locally, even if it cannot finish successfully |
+| Determinism controls choices | Due time plus insertion ID chooses event order; real networks promise neither tie order |
+| Client completion is not deduplication | Ignoring a late reply prevents a second callback, but does not stop repeated server effects |
+| Simulator time is an observer tool | It is different from a node's physical clock or Lamport clock |
+| A trace is an immutable history | Stepping backward reconstructs recorded state; it does not undo Java actions |
 
-Without running the code, predict the result:
-
-1. Schedule A after 8 ms.
-2. Schedule B after 3 ms.
-3. Schedule C after 3 ms.
-4. Cancel B.
-5. Drain the scheduler.
-
-Write down:
-
-- Execution order.
-- Final logical time.
-- Final pending count.
-- Expected trace kinds.
-
-Then encode the scenario as a test and compare the actual trace.
-
-#### Exercise 2: Timeout and reply race
-
-Schedule a reply and timeout at the same logical time in both insertion orders.
-
-Questions:
-
-- Which one runs first in each history?
-- Would it be safe for production code to rely on that order?
-- What client state would prevent a late event from completing a request twice?
-
-The final question is implemented by the request lifecycle in checkpoint 0B.
-
-#### Exercise 3: Failed action
-
-Schedule an action that throws.
-
-Confirm:
-
-- Logical time advances to the action's due time.
-- The task is no longer pending.
-- A Failed trace fact is recorded.
-- The exception reaches the test.
-
-Explain why retrying the action automatically inside the scheduler would be the
-wrong abstraction.
-
-#### Exercise 4: Virtual-thread boundary
-
-Create the scheduler on the test thread and call it from a virtual thread.
-Observe the ownership failure.
-
-Discuss why virtual threads are still appropriate for blocking workers and
-socket handlers even though the deterministic simulator rejects concurrent
-mutation.
-
-#### Exercise 5: Add one invariant
-
-Choose one invariant from the [simulator reference](../../platform/simulator/README.md#invariants) and write a focused test that would fail if
-the invariant were removed. Prefer a transition-level assertion over checking
-only the final output.
-
-
-~~~mermaid
-stateDiagram-v2
-    [*] --> Pending: schedule
-    Pending --> Executed: run
-    Pending --> Cancelled: cancel
-    Executed --> [*]
-    Cancelled --> [*]
-~~~
-
-There is no transition from Cancelled or Executed back to Pending.
-
-### Checkpoint 0B: separate observation from outcome
-
-1. Write the client's observable history for lost-request and lost-reply before
-   opening either trace. Explain why the same timeout is compatible with both.
-2. Step through lost-reply. Stop after the server changes to x but before the
-   deadline. What does the client know at that instant?
-3. Predict the late-reply scenario. Remove the Pending guard in a local
-   experiment, observe which test fails, then restore it.
-4. Compare reply-first and timeout-first. State the invariant that holds in both
-   despite different outcomes. Avoid depending on the scheduler's tie-breaker
-   as a production network guarantee.
-5. Send the same Append request twice. Predict the server value before running.
-   Explain why the existing reply guard cannot prevent this effect. This is the
-   starting failure for the next lab.
-
-### Causality: what order can a node know?
-
-Suppose A sends a request to B, B receives it and sends a reply, and A receives
-that reply. C independently changes its local value without exchanging messages.
-
-1. Draw arrows for local execution order and send-before-receive.
-2. Take their transitive closure: A's send happened before A's receive.
-3. Place C's event at two different positions in the simulator timeline. Explain
-   why neither placement creates a causal relationship with A or B.
-
-A Lamport clock represents these constraints with local counters: increment
-before a local/send event and attach the counter to messages; on receipt, assign
-max(local counter, received counter) + 1. Starting at zero, calculate the
-request/reply timestamps. Then choose a timestamp for C and explain why a
-smaller counter alone does not prove that C caused anything on B.
-
-This is an optional small coding exercise after the hand calculation, not a
-claim that the scheduler already implements distributed logical clocks.
-See [Lamport's paper](../../docs/READING_LIST.md#foundations) for the derivation.
-
-## Self-check and design review
-
-### 1. The client timed out. Did the write happen?
-
-A strong answer should:
-
-- Say that the timeout alone is insufficient.
-- Separate lost request, server failure, lost reply, and delay.
-- Explain that these worlds are locally indistinguishable to the client.
-- Ask what request identity, server deduplication, persistence, or read-back
-  mechanisms exist.
-- Avoid claiming that a longer timeout solves the semantic ambiguity.
-
-### 2. Why not retry every failed request?
-
-Discuss:
-
-- Idempotent and non-idempotent operations.
-- Logical request identity.
-- Duplicate execution after a lost reply.
-- At-most-once processing versus guaranteed completion.
-- Business-level idempotency keys for payments.
-
-### 3. Is a timeout a failure detector?
-
-Explain that it is an imperfect failure detector: it can suspect a failed
-process but can also suspect a slow or partitioned healthy process. State what
-the protocol does with suspicion and which safety rules remain necessary.
-
-### 4. Why build a simulator instead of using integration tests?
-
-A strong answer includes:
-
-- Reproducible ordering and logical time.
-- Testing rare interleavings without wall-clock waits.
-- Named deterministic schedules now; seeds and recorded fault choices when random faults are added.
-- Invariant checks after every transition.
-- The continuing need for separate real-thread, socket, and persistence tests.
-
-The answer should not imply that simulation proves production correctness.
-
-### 5. Why force one scheduler thread?
-
-The goal is not throughput. The goal is to make the test harness, rather than
-the operating system, choose the next protocol event. Production adapters can
-remain concurrent while their protocol effects are tested deterministically.
-
-### 6. What is the difference between safety and availability?
-
-Use a partitioned replicated service:
-
-- Refusing writes may preserve safety but reduce availability.
-- Accepting writes on both sides may improve short-term availability while
-  violating a single-owner or strong-consistency guarantee.
-
-State the exact guarantee before choosing behavior.
-
-### 7. Debugging prompt
-
-A trace shows:
-
-1. A timeout fires.
-2. The client retries.
-3. The original reply arrives.
-4. The retry reply arrives.
-5. Two callbacks mutate client state.
-
-Identify the missing invariant and propose the smallest client-side lifecycle
-state that prevents double completion. Do not yet solve server-side duplicate
-effects; that belongs to the KV retry lab.
+The core invariant for 0B is **at most one terminal client transition per
+request**. A successful reply lets this example report the Append result; a
+timeout makes no assertion about whether the server applied it.
 
 ## Learning checklist
 
 Check these only after doing the exercise and explanation yourself:
 
-- [ ] Predict scheduler order, cancellation, and final time without running code.
-- [ ] Explain local-call versus remote-call evidence and the ambiguous timeout.
-- [ ] State safety and liveness separately, with their assumptions.
-- [ ] Reproduce both lost-message histories and both equal-time race orders.
-- [ ] Explain why client completion and server deduplication are separate.
-- [ ] Add an invariant assertion and explain the failure it catches.
-- [ ] Distinguish simulated time from causal order and a node's local clock.
-- [ ] Revisit the quick revision section later and explain a trace without notes.
+- [X] Predict scheduler order, cancellation, and final time without running code.
+- [X] Explain local-call versus remote-call evidence and the ambiguous timeout.
+- [X] State safety and liveness separately, with their assumptions.
+- [X] Reproduce both lost-message histories and both equal-time race orders.
+- [X] Explain why client completion and server deduplication are separate.
+- [X] Add an invariant assertion and explain the failure it catches.
+- [X] Distinguish simulated time from causal order and a node's local clock.
+- [X] Revisit the quick revision section later and explain a trace without notes.
 
 The implementation acceptance checks cover monotonic time, event order,
 cancellation, failures, immutable traces, owner-thread access, runaway scheduling,
