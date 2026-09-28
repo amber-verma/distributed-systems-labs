@@ -39,7 +39,7 @@ checklist in each active chapter records learning separately.
 | Lab | Topic | Implementation status |
 | --- | --- | --- |
 | 00 | [Foundations](labs/00-foundations/README.md) | 0A scheduler and 0B scripted request/reply implemented and tested |
-| 01 | [Retry-safe KV](labs/01-fault-tolerant-kv/README.md) | Next; planned |
+| 01 | [Retry-safe KV](labs/01-fault-tolerant-kv/README.md) | Local KV coding exercise scaffolded; implementation pending |
 | 02 | [MapReduce](labs/02-mapreduce/README.md) | Planned |
 | 03 | [Raft](labs/03-raft/README.md) | Planned |
 | 04 | [KV over Raft](labs/04-kv-over-raft/README.md) | Planned |
@@ -48,11 +48,15 @@ checklist in each active chapter records learning separately.
 Folder numbers follow the learning order. The KV retry lab and MapReduce are
 independent.
 
-The only Java build module is currently platform:simulator. It contains
+The implemented Java module, platform:simulator, contains
 logical time, cancellation, immutable traces, scripted message delay/loss, and
 one-shot request lifecycle examples. The first offline trace viewer is
 implemented. Crash/restart, stable storage, partitions, seeded faults, and the
 distributed protocols remain future work.
+
+The labs:01-fault-tolerant-kv module contains a local KV API contract, an unfinished
+implementation starter, and opt-in acceptance tests. Follow the lab's exerciseTest
+instructions to implement and verify the local operations yourself.
 
 ## Where material lives
 

@@ -10,3 +10,4 @@ dependencyResolutionManagement {
 }
 
 include("platform:simulator")
+include("labs:01-fault-tolerant-kv")
